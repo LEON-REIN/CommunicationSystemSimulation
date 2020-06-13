@@ -36,16 +36,28 @@ class Communication:
         baseband = []
         __list1 = np.ones(self.fs)
         random.seed(seed)  # Make the random sequence the same.
-        # self.randomlist = [random.randint(0, 1) for i in range(number)]
-        self.randomlist = [1 for i in range(1000)] + [0 for i in range(4000)]
+        self.randomlist = [random.randint(0, 1) for i in range(number)]
         # self.randomlist = [0 for i in range(number)]
         for i in range(number):
             baseband = np.append(baseband, self.randomlist[i] * __list1)
         baseband = baseband.astype('int8')
-        return baseband  # Baseband signal
+        return baseband, number  # Baseband signal and the length of the generated random sequence
 
     def __attenuation__(self):
         pass
+
+    def modulation(self, number, baseband):
+        t = np.linspace(0, self.config['TB'] * number, len(baseband))
+        __list1 = np.cos(2 * np.pi * self.config['f_c1'] * t)
+        if self.config['Modulation'] == '2fsk':
+            baseband2 = 1- baseband
+            __list2 = np.cos(2 * np.pi * self.config['f_c2'] * t)
+            modulated = __list2 * baseband + __list1 * baseband2
+        else:
+            baseband2 = (baseband - 0.5) * 2
+            modulated = baseband2 * __list1
+
+        return modulated
 
     def process(self):
         self.__attenuation__()
@@ -61,7 +73,7 @@ def showsignal(t, y, f_B, figure_num=1, tilte='Hello'):
     plt.ylabel("Amplitude(V)")
 
     y1 = y[0:Communication.num_to_show * Communication.fs]
-    plt.plot(t, y1, label='up')
+    plt.plot(t, y1, 'k')
     plt.title(tilte)
     plt.tight_layout()
     plt.show()

@@ -22,6 +22,12 @@ config = {
 }
 
 bfsk = cm.Communication(**config)
-baseband = bfsk.RandomSequence()
+'''1. Modulation'''
+# Baseband signal and the length of the generated random sequence
+baseband, num = bfsk.RandomSequence()
+# Plot the baseband signal
+# cm.showsignal(bfsk.config['t'], baseband, bfsk.config['f_B'], figure_num=1, tilte='Baseband Signal')
 
-cm.showsignal(bfsk.config['t'], baseband, bfsk.config['f_B'], figure_num=1, tilte='Baseband Signal')
+modulated_seq = bfsk.modulation(num, baseband)
+
+
