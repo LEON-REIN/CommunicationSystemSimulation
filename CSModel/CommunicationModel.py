@@ -50,16 +50,16 @@ class Communication:
         t = np.linspace(0, self.config['TB'] * number, len(baseband))
         __list1 = np.cos(2 * np.pi * self.config['f_c1'] * t)
         if self.config['Modulation'] == '2fsk':
-            baseband2 = 1- baseband
+            baseband2 = 1 - baseband
             __list2 = np.cos(2 * np.pi * self.config['f_c2'] * t)
             modulated = __list2 * baseband + __list1 * baseband2
         else:
             baseband2 = (baseband - 0.5) * 2
             modulated = baseband2 * __list1
+        # PT(0.001W) == 1/2 * Amp^2
+        return modulated * np.sqrt(self.config['PT'] * 2)
 
-        return modulated
-
-    def process(self):
+    def transmitted_to_reciver(self):
         self.__attenuation__()
 
 
@@ -83,10 +83,10 @@ def showsignal(t, y, f_B, figure_num=1, tilte='Hello'):
     fftsize = max(__fftsize_list)  # Find a number less than len(y) and happened to be 2^N for fft.
     y2 = abs(np.fft.rfft(y[0:fftsize]))
     y2 = y2/max(y2)  # Amplitude normalization. y2.shape = fftsize(even)/2+1
-    freqs = np.linspace(0,  4*f_B, int(fftsize/2 + 1))[0:int(8*len(y2)/Communication.fs)]
+    freqs = np.linspace(0,  5 * f_B, int(fftsize/2 + 1))[0:int(10 * len(y2)/Communication.fs)]
     y2 = y2[0:len(freqs)]
-    plt.xticks(np.linspace(0, freqs[-1], 5),
-               ["0"]+['%.2f' % (i * f_B/1e6) for i in range(1, 5)])
+    plt.xticks(np.linspace(0, freqs[-1], 6),
+               ["0"]+['%.2f' % (i * f_B/1e6) for i in range(1, 6)])
     plt.xlabel("Frequency(MHz)")
     plt.ylabel("Normalized Amplitude")
     # print(freqs.shape, )

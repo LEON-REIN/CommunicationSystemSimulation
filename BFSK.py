@@ -29,5 +29,6 @@ baseband, num = bfsk.RandomSequence()
 # cm.showsignal(bfsk.config['t'], baseband, bfsk.config['f_B'], figure_num=1, tilte='Baseband Signal')
 
 modulated_seq = bfsk.modulation(num, baseband)
+# cm.showsignal(bfsk.config['t'], modulated_seq, bfsk.config['f_B'], figure_num=1, tilte='Modulated Signal')
 
 
