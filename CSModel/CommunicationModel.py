@@ -4,11 +4,15 @@
 # @File     : CommunicationModel.py
 # @Software : PyCharm
 # @Notice   : It's a WINDOWS version!
+#             I didn't move the center frequency to 2.4GHz after modulation for convenience.
+#             Consequently,  I added awgn-sequence which had passed the LPF.
+#             And this is equivalent to moving to zero frequency after passing BPF.
 
 
 import matplotlib.pyplot as plt
 import numpy as np
 import random
+from scipy import signal
 
 
 class Communication:
@@ -52,13 +56,14 @@ class Communication:
                 + 33 * np.log10(self.config['D'] / self.d0)
 
         PL = 10 ** (PL_dB / 10)
-        self.config['received'] = self.config['modulated'] / PL
+        self.config['received'] = self.config['modulated'] / np.sqrt(PL)
+        self.config['PR_s'] = self.config['PT'] / PL  # Or 0.5 * max(self.config['received']) ** 2
 
     def __awgn__(self):
         __k = 1.38e-23  # J/K
-        sqrt_power = np.sqrt(self.config['B'] * self.config['K'] * __k)
-        __noise = np.random.randn(len(self.config['modulated'])) * sqrt_power
-        self.config['received'] = self.config['received'] + __noise  # TODO: too powerful noise QwQ
+        self.config['PR_n'] = self.config['B'] * self.config['K'] * __k
+        self.config['noise'] = np.random.randn(len(self.config['modulated'])) * np.sqrt(self.config['PR_n'])
+        self.config['received'] = self.config['received'] + self.config['noise']  # TODO: too powerful noise QwQ
 
     def modulation(self, number, baseband):
         t = np.linspace(0, self.config['TB'] * number, len(baseband))
@@ -81,11 +86,18 @@ class Communication:
         self.__awgn__()
         return self.config['received']
 
-    def demodulation(self):
-        pass
+    def demodulation(self):  # Coherent demodulation TODO: 2fsk & 2psk
+        # self.config['noise'] = fir(self.config['noise'])
+        __cut_off = 2 * 1 / self.fs  # Normalized cut-off frequency
+        __b, __a = signal.butter(10, __cut_off, btype='low')  # 10th order IIR LPF named Butterworth
+        self.config['noise'] = signal.filtfilt(__b, __a, self.config['noise'])
+        self.config['received'] = self.config['received'] + self.config['noise']
+        self.config['demodulated'] = self.config['received']
+        return self.config['demodulated']
 
     def calculate_Pe(self):
-        pass
+        self.config['SNR'] = self.config['PR_s'] / self.config['PR_n']
+        return self.config['Pe'], self.config['SNR']
 
 
 def showsignal(t, y, f_B, figure_num=1, tilte='Hello'):
