@@ -17,18 +17,21 @@ config = {
     'f_c2': 20e6,  # '2fsk' ONLY! Higher carrier frequency.
 
     'B': 20e6,  # Bandwidth
-    'fc': 2.4e9,  # 2.4GHz
+    'fc': 2.4e9,  # Center frequency = 2.4GHz
     'PT': 0.001,  # Transmitting power(W)! Equal to -30dBW or 0dBm.
+    'T': 34,  # Celsius degree
+    'D': 100,  # Communication distance
 }
 
 bfsk = cm.Communication(**config)
 '''1. Modulation'''
 # Baseband signal and the length of the generated random sequence
-baseband, num = bfsk.RandomSequence()
+baseband_seq, num = bfsk.RandomSequence()
 # Plot the baseband signal
-# cm.showsignal(bfsk.config['t'], baseband, bfsk.config['f_B'], figure_num=1, tilte='Baseband Signal')
+# cm.showsignal(bfsk.config['t'], baseband_seq, bfsk.config['f_B'], figure_num=1, tilte='Baseband Signal')
 
-modulated_seq = bfsk.modulation(num, baseband)
-# cm.showsignal(bfsk.config['t'], modulated_seq, bfsk.config['f_B'], figure_num=1, tilte='Modulated Signal')
+modulated_seq = bfsk.modulation(num, baseband_seq)
+# cm.showsignal(bfsk.config['t'], modulated_seq, bfsk.config['f_B'], figure_num=3, tilte='Modulated Signal')
 
-
+received_seq = bfsk.transmitted_to_receiver()
+cm.showsignal(bfsk.config['t'], received_seq, bfsk.config['f_B'], figure_num=5, tilte='Received Signal(34℃, 100m)')

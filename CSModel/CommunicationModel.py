@@ -15,6 +15,8 @@ class Communication:
     num_to_show = 6
     figure_num = 1
     fs = 50  # 50*f_B, satisfies the Nyquist criterion.
+    d0 = 8  # meter
+    c = 3e8  # m/s
 
     def __init__(self, **config):
         self.randomlist = []  # Random sequence
@@ -27,6 +29,7 @@ class Communication:
         # Time series. Only to show 'num_to_show' symbols' wave shape.
         self.config['t'] = np.linspace(0, self.num_to_show * self.config['TB'], self.num_to_show * self.fs)
         self.config['f_B'] = 1 / self.config['TB']
+        self.config['K'] = self.config['T'] + 273.15
 
     def RandomSequence(self, number=5000, seed=1):
         """
@@ -44,30 +47,52 @@ class Communication:
         return baseband, number  # Baseband signal and the length of the generated random sequence
 
     def __attenuation__(self):
-        pass
+
+        PL_dB = 20 * np.log10(4 * np.pi * self.config['fc'] * self.d0 / self.c) \
+                + 33 * np.log10(self.config['D'] / self.d0)
+
+        PL = 10 ** (PL_dB / 10)
+        self.config['received'] = self.config['modulated'] / PL
+
+    def __awgn__(self):
+        __k = 1.38e-23  # J/K
+        sqrt_power = np.sqrt(self.config['B'] * self.config['K'] * __k)
+        __noise = np.random.randn(len(self.config['modulated'])) * sqrt_power
+        self.config['received'] = self.config['received'] + __noise  # TODO: too powerful noise QwQ
 
     def modulation(self, number, baseband):
         t = np.linspace(0, self.config['TB'] * number, len(baseband))
         __list1 = np.cos(2 * np.pi * self.config['f_c1'] * t)
-        if self.config['Modulation'] == '2fsk':
+        if self.config['Modulation'] == '2fsk':  # keying method
             baseband2 = 1 - baseband
             __list2 = np.cos(2 * np.pi * self.config['f_c2'] * t)
             modulated = __list2 * baseband + __list1 * baseband2
-        else:
-            baseband2 = (baseband - 0.5) * 2
+        else:  # keying method
+            baseband2 = (baseband - 0.5) * 2  # (0 1 1 0 1 ...) -> (-1 1 1 -1 1 ...)
             modulated = baseband2 * __list1
-        # PT(0.001W) == 1/2 * Amp^2
-        return modulated * np.sqrt(self.config['PT'] * 2)
+        # PT(0.001W) == 1/2 * Amp^2, Amp ~=~ 0.0447
+        self.config['modulated'] = modulated * np.sqrt(self.config['PT'] * 2)
+        # I didn't move the center frequency to 2.4GHz, one for my laziness,
+        # another for its not affecting the consequence of 'Lossless' demodulation.
+        return self.config['modulated']
 
-    def transmitted_to_reciver(self):
+    def transmitted_to_receiver(self):
         self.__attenuation__()
+        self.__awgn__()
+        return self.config['received']
+
+    def demodulation(self):
+        pass
+
+    def calculate_Pe(self):
+        pass
 
 
 def showsignal(t, y, f_B, figure_num=1, tilte='Hello'):
     plt.figure(num=figure_num)
     __fftsize_list = np.array([2 ** i for i in range(20)])
-    xticks_list = [r"$%dT_B$" % i for i in range(Communication.num_to_show+1)]
-    plt.xticks(np.linspace(0, t.max(), Communication.num_to_show+1),
+    xticks_list = [r"$%dT_B$" % i for i in range(Communication.num_to_show + 1)]
+    plt.xticks(np.linspace(0, t.max(), Communication.num_to_show + 1),
                xticks_list)
     plt.xlabel("Time(s)")
     plt.ylabel("Amplitude(V)")
@@ -82,11 +107,11 @@ def showsignal(t, y, f_B, figure_num=1, tilte='Hello'):
     __fftsize_list = np.where(__fftsize_list > len(y), 0, __fftsize_list)
     fftsize = max(__fftsize_list)  # Find a number less than len(y) and happened to be 2^N for fft.
     y2 = abs(np.fft.rfft(y[0:fftsize]))
-    y2 = y2/max(y2)  # Amplitude normalization. y2.shape = fftsize(even)/2+1
-    freqs = np.linspace(0,  5 * f_B, int(fftsize/2 + 1))[0:int(10 * len(y2)/Communication.fs)]
+    y2 = y2 / max(y2)  # Amplitude normalization. y2.shape = fftsize(even)/2+1
+    freqs = np.linspace(0, 5 * f_B, int(fftsize / 2 + 1))[0:int(10 * len(y2) / Communication.fs)]
     y2 = y2[0:len(freqs)]
     plt.xticks(np.linspace(0, freqs[-1], 6),
-               ["0"]+['%.2f' % (i * f_B/1e6) for i in range(1, 6)])
+               ["0"] + ['%.2f' % (i * f_B / 1e6) for i in range(1, 6)])
     plt.xlabel("Frequency(MHz)")
     plt.ylabel("Normalized Amplitude")
     # print(freqs.shape, )
