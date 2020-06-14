@@ -5,8 +5,6 @@
 # @Software : PyCharm
 # @Notice   : It's a WINDOWS version!
 #             I didn't move the center frequency to 2.4GHz after modulation for convenience.
-#             Consequently,  I added awgn-sequence which had passed the LPF.
-#             And this is equivalent to moving to zero frequency after passing BPF.
 
 
 import matplotlib.pyplot as plt
@@ -78,7 +76,7 @@ class Communication:
         # PT(0.001W) == 1/2 * Amp^2, Amp ~=~ 0.0447
         self.config['modulated'] = modulated * np.sqrt(self.config['PT'] * 2)
         # I didn't move the center frequency to 2.4GHz, one for my laziness,
-        # another for its not affecting the consequence of 'Lossless' demodulation.
+        # another for its not affecting the consequence of 'Lossless' Down-conversion-to-zero.
         return self.config['modulated']
 
     def transmitted_to_receiver(self):
@@ -87,12 +85,11 @@ class Communication:
         return self.config['received']
 
     def demodulation(self):  # Coherent demodulation TODO: 2fsk & 2psk
-        # self.config['noise'] = fir(self.config['noise'])
         __cut_off = 2 * 1 / self.fs  # Normalized cut-off frequency
-        __b, __a = signal.butter(10, __cut_off, btype='low')  # 10th order IIR LPF named Butterworth
-        self.config['noise'] = signal.filtfilt(__b, __a, self.config['noise'])
-        self.config['received'] = self.config['received'] + self.config['noise']
-        self.config['demodulated'] = self.config['received']
+        # __b, __a = signal.butter(10, __cut_off, btype='low')  # 10th order IIR LPF named Butterworth
+        # self.config['noise'] = signal.filtfilt(__b, __a, self.config['noise'])
+        # self.config['received'] = self.config['received'] + self.config['noise']
+        # self.config['demodulated'] = self.config['received']
         return self.config['demodulated']
 
     def calculate_Pe(self):

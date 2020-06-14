@@ -37,11 +37,12 @@ modulated_seq = bfsk.modulation(num, baseband_seq)
 '''2. Transmission'''
 
 received_seq = bfsk.transmitted_to_receiver()
-cm.showsignal(bfsk.config['t'], received_seq, bfsk.config['f_B'], figure_num=5, tilte='Received Signal(34℃, 200m)')
+# cm.showsignal(bfsk.config['t'], received_seq, bfsk.config['f_B'], figure_num=5, tilte='Received Signal(34℃, 200m)')
 
 '''3. Demodulation'''
 
 demodulation_seq = bfsk.demodulation()
+cm.showsignal(bfsk.config['t'], demodulation_seq, bfsk.config['f_B'], figure_num=3, tilte='Demodulated Signal')
 
 
 '''4. Calculating Pe'''
