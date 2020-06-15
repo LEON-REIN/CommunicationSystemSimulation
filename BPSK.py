@@ -1,7 +1,7 @@
 # @.@ coding:utf-8 ^-^
 # @Author   : Leon Rein
-# @Time     : 2020-06-12  ~  11:53 
-# @File     : BFSK.py
+# @Time     : 2020-06-15  ~  14:05 
+# @File     : BPSK.py
 # @Software : PyCharm
 # @Notice   : It's a WINDOWS version!
 
@@ -10,15 +10,16 @@ from CSModel import CommunicationModel as cm
 from matplotlib import pyplot as plt
 import numpy as np
 
+
 config = {
-    'Modulation': '2fsk',  # '2fsk' or '2psk'
-    'f_c1': 10e6,  # Lower carrier frequency in '2fsk' or the carrier frequency in '2psk'.
+    'Modulation': '2psk',  # '2fsk' or '2psk'
+    'f_c1': 10e6,  # '2fsk' ONLY! Lower carrier frequency.
     'f_c2': 20e6,  # '2fsk' ONLY! Higher carrier frequency.
 
     'B': 20e6,  # Bandwidth
     'fc': 2.4e9,  # Center frequency = 2.4GHz
     'PT': 0.001,  # Transmitting power(W)! Equal to -30dBW or 0dBm.
-    'T': 34,  # Celsius degree
+    'T': 25,  # Celsius degree
     'D': 100,  # Communication distance
 }
 
@@ -38,15 +39,11 @@ modulated_seq = bfsk.modulation(baseband_seq)
 '''2. Transmission'''
 
 received_seq = bfsk.transmitted_to_receiver()
-# cm.showsignal(bfsk.config['t'], received_seq, bfsk.config['f_B'], figure_num=5,
-#               tilte='Received Signal({T}℃, {D}m)'.format(T=config['T'], D=config['D']))
+# cm.showsignal(bfsk.config['t'], received_seq, bfsk.config['f_B'], figure_num=5, tilte='Received Signal(34℃, 200m)')
 
 '''3. Demodulation'''
 
-demodulation_seq, demodulation_seq2 = bfsk.demodulation()
+demodulation_seq, = bfsk.demodulation()
 # cm.showsignal(bfsk.config['t'], demodulation_seq, bfsk.config['f_B'], figure_num=1, tilte='Demodulated Signal')
-# cm.showsignal(bfsk.config['t'], demodulation_seq2, bfsk.config['f_B'], figure_num=3, max_frequency=5,
-#               tilte='Demodulated Signal 2')
 
-'''4. Calculating the Pe'''
-Pe, SNR = bfsk.calculate_Pe()  # TODO: Pe is easy to get 0 QwQ
+'''4. Calculating Pe'''
