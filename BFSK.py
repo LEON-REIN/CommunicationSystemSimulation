@@ -57,7 +57,7 @@ def get_result(CM_Model):
     #               tilte='Demodulated Signal 2')
 
     '''4. Calculating the Pe'''
-    Pe, SNR = CM_Model.calculate_Pe()  # TODO: Pe is easy to get 0 QwQ
+    Pe, SNR = CM_Model.calculate_Pe()
     return Pe, SNR
 
 

@@ -102,7 +102,6 @@ class Communication:
         __corner1 = np.array([self.config['f_c1'] - self.config['f_B'], self.config['f_c1'] + self.config['f_B']]) \
                     / (self.fs * self.config['f_B']) * 2
         # 6th order IIR LPF named Butterworth for 'f_c1' of Carrier1
-        print(__corner1)
         __b1, __a1 = signal.butter(6, __corner1, 'bandpass')  # Just ignore the 'Warning' in pycharm
         self.config['demodulated'] = signal.filtfilt(__b1, __a1, self.config['received'])
         self.config['demodulated'] = self.config['demodulated'] * self.config['__clist1']  # Multiply by carrier
@@ -121,9 +120,9 @@ class Communication:
             self.config['demodulated2'] = self.config['demodulated2'] * self.config['__clist2']
             self.config['demodulated2'] = signal.filtfilt(__b, __a, self.config['demodulated2'])
             self.demodulated_list = [1 if self.config['demodulated2'][sampling_seq[i]] >
-                                          self.config['demodulated'][sampling_seq[i]] else 0 for i in
+                                     self.config['demodulated'][sampling_seq[i]] else 0 for i in
                                      range(len(self.random_list))]
-        else:  # TODO 3: haven't been tested yet!
+        else:
             self.demodulated_list = [1 if self.config['demodulated'][sampling_seq[i]] > 0 else 0
                                      for i in range(len(self.random_list))]
         return self.config['demodulated'], self.config['demodulated2']  # Ignore 'demodulated2' if in '2psk'
@@ -177,7 +176,6 @@ def showsignal(t, y, f_B, figure_num=1, max_frequency=5, tilte='Hello'):
     plt.show()
 
 
-# TODO 4: Increase Y-axis range if necessary, textbox,
 def BER_curve(name, unit, x, SNR, Pe, figure_num=1):
     """
     :param name: 2fsk or 2psk

@@ -19,7 +19,7 @@ D_list = np.arange(50, 201, 10)  # 50~200
 myconfig = {
     'Modulation': '2psk',  # '2fsk' or '2psk'
     # f_c1 must > f_B !
-    'f_c1': 20e6,  # Lower carrier frequency in '2fsk' or the carrier frequency in '2psk'.
+    'f_c1': 40e6,  # Lower carrier frequency in '2fsk' or the carrier frequency in '2psk'.
     'f_c2': None,  # '2fsk' ONLY! Higher carrier frequency.
     'B': 20e6,  # Bandwidth
     'fc': 2.4e9,  # Center frequency = 2.4GHz
@@ -46,19 +46,17 @@ def get_result(CM_Model):
     """2. Transmission"""
 
     received_seq = CM_Model.transmitted_to_receiver()
-    # cm.showsignal(CM_Model.config['t'], received_seq, CM_Model.config['f_B'], figure_num=5,
+    # cm.showsignal(CM_Model.config['t'], received_seq, CM_Model.config['f_B'], figure_num=5, max_frequency=8,
     #               tilte='Received Signal({T}℃, {D}m)'.format(T=config['T'], D=config['D']))
 
     """3. Demodulation"""
 
-    demodulation_seq, demodulation_seq2 = CM_Model.demodulation()
-    # cm.showsignal(CM_Model.config['t'], demodulation_seq, CM_Model.config['f_B'], figure_num=1,
+    demodulation_seq, _ = CM_Model.demodulation()
+    # cm.showsignal(CM_Model.config['t'], demodulation_seq, CM_Model.config['f_B'], figure_num=1, max_frequency=8,
     #               tilte='Demodulated Signal')
-    # cm.showsignal(CM_Model.config['t'], demodulation_seq2, CM_Model.config['f_B'], figure_num=3, max_frequency=5,
-    #               tilte='Demodulated Signal 2')
 
     '''4. Calculating the Pe'''
-    Pe, SNR = CM_Model.calculate_Pe()  # TODO: Pe is easy to get 0 QwQ
+    Pe, SNR = CM_Model.calculate_Pe()
     return Pe, SNR
 
 
