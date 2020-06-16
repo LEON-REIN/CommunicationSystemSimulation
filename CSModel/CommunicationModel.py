@@ -10,13 +10,14 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import random
-from scipy import signal
+from scipy import signal, special
 
 
 class Communication:
     num_to_show = 6
     figure_num = 1
-    fs = 50  # 50*f_B!! Satisfies the Nyquist criterion.
+    # Decrease of fs will lead to increase of Pe
+    fs = 12  # How many TIMES the f_B!! Satisfies the Nyquist criterion. The number must > 10 (5M+20M/5M = 5)
     d0 = 8  # meter
     c = 3e8  # m/s
     seed = 1  # seed of random
@@ -69,7 +70,7 @@ class Communication:
 
     def __awgn__(self):
         __k = 1.38e-23  # J/K
-        self.config['PR_n'] = self.config['B'] * self.config['K'] * __k  # TODO: Enhance the noise, if necessary.
+        self.config['PR_n'] = self.config['B'] * self.config['K'] * __k  # TODO 0: Enhance the noise, if necessary.
         np.random.seed(self.seed)
         self.config['noise'] = np.random.randn(len(self.config['modulated'])) * np.sqrt(self.config['PR_n'])
         self.config['received'] = self.config['received'] + self.config['noise']
@@ -98,29 +99,31 @@ class Communication:
 
     def demodulation(self):  # Coherent demodulation
         # Normalized cut-off frequency. Do NOT forget the '* 2'
-        __cut_off1 = np.array([self.config['f_c1'] - self.config['f_B'], self.config['f_c1'] + self.config['f_B']]) \
-                     / (self.fs * self.config['f_B']) * 2
+        __corner1 = np.array([self.config['f_c1'] - self.config['f_B'], self.config['f_c1'] + self.config['f_B']]) \
+                    / (self.fs * self.config['f_B']) * 2
         # 6th order IIR LPF named Butterworth for 'f_c1' of Carrier1
-        __b1, __a1 = signal.butter(6, __cut_off1, 'bandpass')  # Just ignore the 'Warning' in pycharm
+        print(__corner1)
+        __b1, __a1 = signal.butter(6, __corner1, 'bandpass')  # Just ignore the 'Warning' in pycharm
         self.config['demodulated'] = signal.filtfilt(__b1, __a1, self.config['received'])
         self.config['demodulated'] = self.config['demodulated'] * self.config['__clist1']  # Multiply by carrier
-        __cut_off = 2 * 1 / Communication.fs
-        __b, __a = signal.butter(10, __cut_off, 'lowpass')  # LPF
+        __corner = 2 * 1 / Communication.fs
+        __b, __a = signal.butter(10, __corner, 'lowpass')  # LPF
         self.config['demodulated'] = signal.filtfilt(__b, __a, self.config['demodulated'])
         # Timing sampling pulse for judgment
-        sampling_seq = np.array([50 * i for i in range(len(self.random_list))]) + 25
+        sampling_seq = np.array([self.fs * i for i in range(len(self.random_list))]) + int(self.fs / 2)
+        # TODO 2: Change 'int(self.fs / 2)', if  necessary.
         if self.config['Modulation'] == '2fsk':
-            __cut_off2 = np.array([self.config['f_c2'] - self.config['f_B'], self.config['f_c2'] +
-                                   self.config['f_B']]) / (self.fs * self.config['f_B']) * 2
-            __b2, __a2 = signal.butter(6, __cut_off2, 'bandpass')
-            # print(__cut_off1, __cut_off2)
+            __corner2 = np.array([self.config['f_c2'] - self.config['f_B'], self.config['f_c2'] +
+                                  self.config['f_B']]) / (self.fs * self.config['f_B']) * 2
+            __b2, __a2 = signal.butter(6, __corner2, 'bandpass')
+            # print(__corner1, __corner2)
             self.config['demodulated2'] = signal.filtfilt(__b2, __a2, self.config['received'])
             self.config['demodulated2'] = self.config['demodulated2'] * self.config['__clist2']
             self.config['demodulated2'] = signal.filtfilt(__b, __a, self.config['demodulated2'])
             self.demodulated_list = [1 if self.config['demodulated2'][sampling_seq[i]] >
                                           self.config['demodulated'][sampling_seq[i]] else 0 for i in
                                      range(len(self.random_list))]
-        else:  # TODO: haven't been tested yet!
+        else:  # TODO 3: haven't been tested yet!
             self.demodulated_list = [1 if self.config['demodulated'][sampling_seq[i]] > 0 else 0
                                      for i in range(len(self.random_list))]
         return self.config['demodulated'], self.config['demodulated2']  # Ignore 'demodulated2' if in '2psk'
@@ -134,9 +137,12 @@ class Communication:
 
 def showsignal(t, y, f_B, figure_num=1, max_frequency=5, tilte='Hello'):
     """
-    Param
-    max_frequency: Maximum multiple of baseband frequency(f_B) to show
-
+    :param t:
+    :param y:
+    :param f_B:
+    :param figure_num:
+    :param max_frequency: Maximum multiple of baseband frequency(f_B) to show
+    :param tilte: Title
     """
     plt.figure(num=figure_num)
     __fftsize_list = np.array([2 ** i for i in range(20)])
@@ -171,9 +177,29 @@ def showsignal(t, y, f_B, figure_num=1, max_frequency=5, tilte='Hello'):
     plt.show()
 
 
-# TODO: Theoretical calculation. Annotations, textbox, legend and linewidth!
-def show_differences(name):
+# TODO 4: Increase Y-axis range if necessary, textbox,
+def BER_curve(name, unit, x, SNR, Pe, figure_num=1):
+    """
+    :param name: 2fsk or 2psk
+    :param unit: The unit of x, '℃' or 'm'
+    :param x:  A list of X-axis scale
+    :param SNR: A list of SNR
+    :param Pe: A list of BER(Bit Error Rate)
+    :param figure_num: Number of this figure
+    :return: None
+    """
     if name == '2fsk':
-        pass
+        Theo_Pe = 0.5 * special.erfc(np.sqrt(np.array(SNR) / 2))
     else:
-        pass
+        Theo_Pe = 0.5 * special.erfc(np.sqrt(SNR))
+    # Start Ploting Figure
+    plt.figure(num=figure_num)
+    plt.xlabel(r"$Distance(m)$" if unit == 'm' else r"$Temperature(^\circ C)$")
+    plt.ylabel(r"$P_e$")
+    plt.title(r'$P_e\;Curve\;of\;${name_} When {var} Changes'
+              .format(name_=name, var=('Distance' if unit == 'm' else 'Temperature')))
+
+    plt.plot(x, Theo_Pe, 'ko-.', label=r'$Theoretically$', lw=2)
+    plt.plot(x, Pe, 'k*-', label=r'$Simulation$', lw=1)
+    plt.legend()
+    plt.show()
