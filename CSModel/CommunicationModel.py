@@ -70,8 +70,9 @@ class Communication:
 
     def __awgn__(self):
         __k = 1.38e-23  # J/K
-        self.config['PR_n'] = self.config['B'] * self.config['K'] * __k  # TODO 0: Enhance the noise, if necessary.
+        self.config['PR_n'] = self.config['B'] * self.config['K'] * __k
         np.random.seed(self.seed)
+        # TODO 0: Enhance the noise, if necessary, eg. by 2.1937(BFSK) or 2.05(BPSK)
         self.config['noise'] = np.random.randn(len(self.config['modulated'])) * np.sqrt(self.config['PR_n'])
         self.config['received'] = self.config['received'] + self.config['noise']
 
@@ -125,6 +126,7 @@ class Communication:
         else:
             self.demodulated_list = [1 if self.config['demodulated'][sampling_seq[i]] > 0 else 0
                                      for i in range(len(self.random_list))]
+            # TODO 3: Change decision threshold, if  necessary.
         return self.config['demodulated'], self.config['demodulated2']  # Ignore 'demodulated2' if in '2psk'
 
     def calculate_Pe(self):
@@ -194,6 +196,7 @@ def BER_curve(name, unit, x, SNR, Pe, figure_num=1):
     plt.figure(num=figure_num)
     plt.xlabel(r"$Distance(m)$" if unit == 'm' else r"$Temperature(^\circ C)$")
     plt.ylabel(r"$P_e$")
+    # plt.ylim((-0.004, 0.06))
     plt.title(r'$P_e\;Curve\;of\;${name_} When {var} Changes'
               .format(name_=name, var=('Distance' if unit == 'm' else 'Temperature')))
 
