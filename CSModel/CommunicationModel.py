@@ -41,7 +41,8 @@ class Communication:
         self.config['__clist1'] = []  # Carrier Signal 1
         self.config['__clist2'] = []  # Carrier Signal 2, ONLY in '2fsk'
         self.config['modulated'] = []  # Modulated Signal
-        self.config['received'] = []  # Received Signal
+        self.config['received_s'] = []  # Received Signal
+        self.config['received'] = []  # Received Signal+Noise
         self.config['demodulated'] = []  # Demodulated Signal
         self.config['demodulated2'] = []  # Demodulated Signal 2, for '2fsk' ONLY
         self.config['Pe'] = 0
@@ -65,16 +66,29 @@ class Communication:
                 + 33 * np.log10(self.config['D'] / self.d0)
 
         PL = 10 ** (PL_dB / 10)
-        self.config['received'] = self.config['modulated'] / np.sqrt(PL)
-        self.config['PR_s'] = self.config['PT'] / PL  # Or 0.5 * max(self.config['received']) ** 2
+        # Signal ONLY!
+        self.config['received_s'] = self.config['modulated'] / np.sqrt(PL)
+        self.config['PR_s'] = self.config['PT'] / PL  # Or 0.5 * max(self.config['received_s']) ** 2
 
     def __awgn__(self):
         __k = 1.38e-23  # J/K
-        self.config['PR_n'] = self.config['B'] * self.config['K'] * __k
+        # Tip: PR_n is the power of noise which is after BPF with band: 2*f_B!
+        self.config['PR_n'] = 2 * self.config['B'] * self.config['K'] * __k
         np.random.seed(self.seed)
-        # TODO 0: Enhance the noise, if necessary, eg. by 2.1937(BFSK) or 2.05(BPSK)
-        self.config['noise'] = np.random.randn(len(self.config['modulated'])) * np.sqrt(self.config['PR_n'])
-        self.config['received'] = self.config['received'] + self.config['noise']
+        # Normalized cut-off frequency. Do NOT forget the '* 2'
+        __corner1 = np.array([self.config['f_c1'] - self.config['f_B'], self.config['f_c1'] + self.config['f_B']]) \
+                    / (self.fs * self.config['f_B']) * 2
+        # 6th order IIR LPF named Butterworth for 'f_c1' of Carrier1
+        __b1, __a1 = signal.butter(6, __corner1, 'bandpass')
+        # White noise is not what we want.
+        self.config['noise'] = np.random.randn(len(self.config['modulated']))
+        # We want Band limited Gaussian noise!
+        self.config['noise'] = signal.filtfilt(__b1, __a1, self.config['noise'])
+        # Make sure the noise power is equivalent to self.config['PR_n'], which is calculated after BPF.
+        self.config['noise'] = self.config['noise'] / np.sqrt(np.var(self.config['noise'])) \
+                               * np.sqrt(self.config['PR_n'])
+        # print(np.var(self.config['noise']), self.config['PR_n'])
+        self.config['received'] = self.config['received_s'] + self.config['noise']
 
     def modulation(self, baseband):
         number = len(self.random_list)
@@ -104,7 +118,9 @@ class Communication:
                     / (self.fs * self.config['f_B']) * 2
         # 6th order IIR LPF named Butterworth for 'f_c1' of Carrier1
         __b1, __a1 = signal.butter(6, __corner1, 'bandpass')  # Just ignore the 'Warning' in pycharm
-        self.config['demodulated'] = signal.filtfilt(__b1, __a1, self.config['received'])
+        self.config['demodulated'] = signal.filtfilt(__b1, __a1, self.config['received_s'])
+        # TODO: Increase noise if necessary, e.g. multiply by 1.16(BPSK) or 1.65(BFSK)
+        self.config['demodulated'] = self.config['demodulated'] + self.config['noise'] * 1
         self.config['demodulated'] = self.config['demodulated'] * self.config['__clist1']  # Multiply by carrier
         __corner = 2 * 1 / Communication.fs
         __b, __a = signal.butter(10, __corner, 'lowpass')  # LPF
@@ -121,7 +137,7 @@ class Communication:
             self.config['demodulated2'] = self.config['demodulated2'] * self.config['__clist2']
             self.config['demodulated2'] = signal.filtfilt(__b, __a, self.config['demodulated2'])
             self.demodulated_list = [1 if self.config['demodulated2'][sampling_seq[i]] >
-                                     self.config['demodulated'][sampling_seq[i]] else 0 for i in
+                                          self.config['demodulated'][sampling_seq[i]] else 0 for i in
                                      range(len(self.random_list))]
         else:
             self.demodulated_list = [1 if self.config['demodulated'][sampling_seq[i]] > 0 else 0
@@ -196,7 +212,7 @@ def BER_curve(name, unit, x, SNR, Pe, figure_num=1):
     plt.figure(num=figure_num)
     plt.xlabel(r"$Distance(m)$" if unit == 'm' else r"$Temperature(^\circ C)$")
     plt.ylabel(r"$P_e$")
-    # plt.ylim((-0.004, 0.06))
+    # plt.ylim((-0.01, 0.15))
     plt.title(r'$P_e\;Curve\;of\;${name_} When {var} Changes'
               .format(name_=name, var=('Distance' if unit == 'm' else 'Temperature')))
 
