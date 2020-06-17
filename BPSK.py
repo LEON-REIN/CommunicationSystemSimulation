@@ -33,7 +33,7 @@ def get_result(CM_Model):
     """1. Modulation"""
 
     # Baseband signal and the length of the generated random sequence
-    baseband_seq = CM_Model.RandomSequence(number=10000)
+    baseband_seq = CM_Model.RandomSequence(number=5000)
 
     # Plot the baseband signal
     # cm.showsignal(CM_Model.config['t'], baseband_seq, CM_Model.config['f_B'], figure_num=1,

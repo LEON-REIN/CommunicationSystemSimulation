@@ -32,7 +32,7 @@ def get_result(CM_Model):
     """1. Modulation"""
 
     # Baseband signal and the length of the generated random sequence
-    baseband_seq = CM_Model.RandomSequence(number=10000)
+    baseband_seq = CM_Model.RandomSequence(number=5000)
 
     # Plot the baseband signal
     # cm.showsignal(CM_Model.config['t'], baseband_seq, CM_Model.config['f_B'], figure_num=1,
@@ -81,7 +81,7 @@ for D in D_list:
     Pe_list1.append(Pe_)
     SNR_list1.append(SNR_)
 
-cm.BER_curve('2fsk', 'm', D_list, SNR_list1, Pe_list1, figure_num=1)
+cm.BER_curve('2fsk', 'm', D_list, SNR_list1, Pe_list1, figure_num=3)
 
 """
 Question.2
@@ -95,4 +95,4 @@ for T in T_list:
     Pe_list2.append(Pe_)
     SNR_list2.append(SNR_)
 
-cm.BER_curve('2fsk', '℃', T_list, SNR_list2, Pe_list2, figure_num=2)
+cm.BER_curve('2fsk', '℃', T_list, SNR_list2, Pe_list2, figure_num=5)

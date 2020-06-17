@@ -17,7 +17,7 @@ class Communication:
     num_to_show = 6
     figure_num = 1
     # Decrease of fs will lead to increase of Pe
-    fs = 12  # How many TIMES the f_B!! Satisfies the Nyquist criterion. The number must > 10 (5M+20M/5M = 5)
+    fs = 20  # How many TIMES the f_B!! Satisfies the Nyquist criterion. The number must > 10 (5M+20M/5M = 5)
     d0 = 8  # meter
     c = 3e8  # m/s
     seed = 1  # seed of random
@@ -109,6 +109,8 @@ class Communication:
         # 6th order IIR LPF named Butterworth for 'f_c1' of Carrier1
         __b1, __a1 = signal.butter(6, __corner1, 'bandpass')  # Just ignore the 'Warning' in pycharm
         self.config['demodulated'] = signal.filtfilt(__b1, __a1, self.config['received_s'])
+        # showsignal(self.config['t'], self.config['demodulated'], self.config['f_B'], figure_num=1, max_frequency=8,
+        #            tilte='afterBPF')
         # We want Band limited Gaussian noise!
         self.config['noise'] = signal.filtfilt(__b1, __a1, self.config['noise'])
         # Make sure the noise power is equivalent to self.config['PR_n'], which is calculated after BPF.
