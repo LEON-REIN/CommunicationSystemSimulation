@@ -50,3 +50,5 @@ demodulation_seq, demodulation_seq2 = bpsk.demodulation()
 # cm.showsignal(bpsk.config['t'], demodulation_seq, bpsk.config['f_B'], figure_num=7,
 #               tilte='Demodulated Signal')
 
+cm.showsignal(bpsk.config['t'], bpsk.config['noise'], bpsk.config['f_B'], figure_num=1, max_frequency=8,
+               tilte='noise')

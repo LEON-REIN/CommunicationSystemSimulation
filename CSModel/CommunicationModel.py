@@ -37,7 +37,8 @@ class Communication:
         self.config['K'] = self.config['T'] + 273.15  # Kelvin temperature scale
         self.config['PR_s'] = 0  #
         self.config['PR_n'] = 0
-        self.config['noise'] = []  # awgn noise
+        self.config['noise'] = []  # Bandpass Additive Gaussian noise
+        self.config['noise2'] = []  # Bandpass Additive Gaussian noise, for BFSK ONLY!
         self.config['__clist1'] = []  # Carrier Signal 1
         self.config['__clist2'] = []  # Carrier Signal 2, ONLY in '2fsk'
         self.config['modulated'] = []  # Modulated Signal
@@ -72,22 +73,11 @@ class Communication:
 
     def __awgn__(self):
         __k = 1.38e-23  # J/K
-        # Tip: PR_n is the power of noise which is after BPF with band: 2*f_B!
+        # Tip: PR_n is the power of noise which is AFTER BPF with band: 2*f_B!
         self.config['PR_n'] = 2 * self.config['B'] * self.config['K'] * __k
         np.random.seed(self.seed)
-        # Normalized cut-off frequency. Do NOT forget the '* 2'
-        __corner1 = np.array([self.config['f_c1'] - self.config['f_B'], self.config['f_c1'] + self.config['f_B']]) \
-                    / (self.fs * self.config['f_B']) * 2
-        # 6th order IIR LPF named Butterworth for 'f_c1' of Carrier1
-        __b1, __a1 = signal.butter(6, __corner1, 'bandpass')
-        # White noise is not what we want.
-        self.config['noise'] = np.random.randn(len(self.config['modulated']))
-        # We want Band limited Gaussian noise!
-        self.config['noise'] = signal.filtfilt(__b1, __a1, self.config['noise'])
-        # Make sure the noise power is equivalent to self.config['PR_n'], which is calculated after BPF.
-        self.config['noise'] = self.config['noise'] / np.sqrt(np.var(self.config['noise'])) \
-                               * np.sqrt(self.config['PR_n'])
-        # print(np.var(self.config['noise']), self.config['PR_n'])
+        # White noise is not what we want eventually. This is for ploting here.
+        self.config['noise'] = np.random.randn(len(self.config['modulated'])) * np.sqrt(self.config['PR_n'])
         self.config['received'] = self.config['received_s'] + self.config['noise']
 
     def modulation(self, baseband):
@@ -119,21 +109,33 @@ class Communication:
         # 6th order IIR LPF named Butterworth for 'f_c1' of Carrier1
         __b1, __a1 = signal.butter(6, __corner1, 'bandpass')  # Just ignore the 'Warning' in pycharm
         self.config['demodulated'] = signal.filtfilt(__b1, __a1, self.config['received_s'])
-        # TODO: Increase noise if necessary, e.g. multiply by 1.16(BPSK) or 1.65(BFSK)
-        self.config['demodulated'] = self.config['demodulated'] + self.config['noise'] * 1
+        # We want Band limited Gaussian noise!
+        self.config['noise'] = signal.filtfilt(__b1, __a1, self.config['noise'])
+        # Make sure the noise power is equivalent to self.config['PR_n'], which is calculated after BPF.
+        # TODO: Increase noise if necessary, e.g. multiply by 1.16(BPSK) or 1.22(BFSK)
+        self.config['noise'] = self.config['noise'] / np.sqrt(np.var(self.config['noise'])) \
+                               * np.sqrt(self.config['PR_n']) * 1
+        self.config['demodulated'] = self.config['demodulated'] + self.config['noise']
         self.config['demodulated'] = self.config['demodulated'] * self.config['__clist1']  # Multiply by carrier
         __corner = 2 * 1 / Communication.fs
         __b, __a = signal.butter(10, __corner, 'lowpass')  # LPF
         self.config['demodulated'] = signal.filtfilt(__b, __a, self.config['demodulated'])
         # Timing sampling pulse for judgment
         sampling_seq = np.array([self.fs * i for i in range(len(self.random_list))]) + int(self.fs / 2)
-        # TODO 2: Change 'int(self.fs / 2)', if  necessary.
+        # TODO: Change 'int(self.fs / 2)', if  necessary.
         if self.config['Modulation'] == '2fsk':
+            # White noise
+            self.config['noise2'] = np.random.randn(len(self.config['modulated']))
             __corner2 = np.array([self.config['f_c2'] - self.config['f_B'], self.config['f_c2'] +
                                   self.config['f_B']]) / (self.fs * self.config['f_B']) * 2
             __b2, __a2 = signal.butter(6, __corner2, 'bandpass')
-            # print(__corner1, __corner2)
-            self.config['demodulated2'] = signal.filtfilt(__b2, __a2, self.config['received'])
+            self.config['demodulated2'] = signal.filtfilt(__b2, __a2, self.config['received_s'])
+            self.config['noise2'] = signal.filtfilt(__b2, __a2, self.config['noise2'])
+            # Make sure the noise power is equivalent to self.config['PR_n'], which is calculated after BPF.
+            # TODO: Increase noise if necessary, e.g. multiply by 1.16(BPSK) or 1.22(BFSK)
+            self.config['noise2'] = self.config['noise2'] / np.sqrt(np.var(self.config['noise2'])) \
+                               * np.sqrt(self.config['PR_n']) * 1
+            self.config['demodulated2'] = self.config['demodulated2'] + self.config['noise2']
             self.config['demodulated2'] = self.config['demodulated2'] * self.config['__clist2']
             self.config['demodulated2'] = signal.filtfilt(__b, __a, self.config['demodulated2'])
             self.demodulated_list = [1 if self.config['demodulated2'][sampling_seq[i]] >
@@ -212,7 +214,7 @@ def BER_curve(name, unit, x, SNR, Pe, figure_num=1):
     plt.figure(num=figure_num)
     plt.xlabel(r"$Distance(m)$" if unit == 'm' else r"$Temperature(^\circ C)$")
     plt.ylabel(r"$P_e$")
-    # plt.ylim((-0.01, 0.15))
+    # plt.ylim((-0.01, 0.25))
     plt.title(r'$P_e\;Curve\;of\;${name_} When {var} Changes'
               .format(name_=name, var=('Distance' if unit == 'm' else 'Temperature')))
 
