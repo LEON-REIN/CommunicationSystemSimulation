@@ -59,7 +59,7 @@ class Communication:
         for i in range(number):
             baseband = np.append(baseband, self.random_list[i] * __list1)
         baseband = baseband.astype('int8')
-        return baseband  # Baseband signal and the length of the generated random sequence
+        return baseband  # Baseband signal
 
     def __attenuation__(self):
 
@@ -84,11 +84,11 @@ class Communication:
         number = len(self.random_list)
         t = np.linspace(0, self.config['TB'] * number, len(baseband))
         self.config['__clist1'] = np.cos(2 * np.pi * self.config['f_c1'] * t)
-        if self.config['Modulation'] == '2fsk':  # keying method
+        if self.config['Modulation'] == '2fsk':
             baseband2 = 1 - baseband
             self.config['__clist2'] = np.cos(2 * np.pi * self.config['f_c2'] * t)
             modulated = self.config['__clist2'] * baseband + self.config['__clist1'] * baseband2
-        else:  # keying method
+        else:
             baseband2 = (baseband - 0.5) * 2  # (0 1 1 0 1 ...) -> (-1 1 1 -1 1 ...)
             modulated = baseband2 * self.config['__clist1']
         # PT(0.001W) == 1/2 * Amp^2, Amp ~=~ 0.0447
@@ -224,3 +224,4 @@ def BER_curve(name, unit, x, SNR, Pe, figure_num=1):
     plt.plot(x, Pe, 'k*-', label=r'$Simulation$', lw=1)
     plt.legend()
     plt.show()
+    return Theo_Pe
